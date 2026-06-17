@@ -1,0 +1,18 @@
+.container {
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+}
+
+.bandName {
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.1;
+  letter-spacing: -1px;
+}
+
+.bio {
+  color: #c1c2c5;
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
