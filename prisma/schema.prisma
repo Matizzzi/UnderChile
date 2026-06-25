@@ -1,53 +1,60 @@
-datasource db {
-  provider = "postgresql"
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider = "postgresql"
+}
+
+enum BandStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Region {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  cities    City[]
+  id     String @id @default(cuid())
+  name   String @unique
+  cities City[]
 }
 
 model City {
   id        String   @id @default(cuid())
-  name      String   
-  slug      String   @unique // Ej: "melipilla" -> underchile.cl/melipilla
+  name      String
+  slug      String   @unique
   regionId  String
-  region    Region   @relation(fields: [regionId], references: [id])
+  createdAt DateTime @default(now())
   bands     Band[]
+  region    Region   @relation(fields: [regionId], references: [id])
   events    Event[]
   venues    Venue[]
-  createdAt DateTime @default(now())
 }
 
 model Band {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   name         String
-  slug         String   @unique
-  genre        String[] 
+  slug         String     @unique
+  genre        String[]
   bio          String?
   logoUrl      String?
   spotifyUrl   String?
   instagramUrl String?
-  isFeatured   Boolean  @default(false) // Para destacar bandas ($5-10k)
+  isFeatured   Boolean    @default(false)
+  status       BandStatus @default(APPROVED) // 🔥 Nuevo: control de postulaciones
   cityId       String
-  city         City     @relation(fields: [cityId], references: [id])
-  createdAt    DateTime @default(now())
+  createdAt    DateTime   @default(now())
+  city         City       @relation(fields: [cityId], references: [id])
 }
 
 model Venue {
-  id        String   @id @default(cuid())
-  name      String   
-  slug      String   @unique
-  address   String
-  mapsUrl   String?
-  cityId    String
-  city      City     @relation(fields: [cityId], references: [id])
-  events    Event[]
+  id      String  @id @default(cuid())
+  name    String
+  slug    String  @unique
+  address String
+  mapsUrl String?
+  cityId  String
+  events  Event[]
+  city    City    @relation(fields: [cityId], references: [id])
 }
 
 model Event {
@@ -55,11 +62,11 @@ model Event {
   title       String
   description String?
   date        DateTime
-  ticketUrl   String?  
+  ticketUrl   String?
   isFeatured  Boolean  @default(false)
   cityId      String
-  city        City     @relation(fields: [cityId], references: [id])
   venueId     String
-  venue       Venue    @relation(fields: [venueId], references: [id])
   createdAt   DateTime @default(now())
+  city        City     @relation(fields: [cityId], references: [id])
+  venue       Venue    @relation(fields: [venueId], references: [id])
 }

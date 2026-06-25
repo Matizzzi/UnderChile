@@ -1,15 +1,30 @@
 import type { Metadata } from "next";
 import { ColorSchemeScript, MantineProvider, createTheme } from "@mantine/core";
-import "@mantine/core/styles.css"; // Estilos base de Mantine
-import "./globals.css"; // Tus estilos globales
+import "@mantine/core/styles.css";
+import "./globals.css";
 
+// 🔥 Metadata base del sitio. Cada página puede sobreescribir esto
+// con su propio generateMetadata() para tener título/descripción únicos.
 export const metadata: Metadata = {
-  title: "UnderChile | Escenas Musicales Locales",
-  description: "La plataforma de la música independiente chilena.",
+  metadataBase: new URL("https://underchile.cl"), // ⚠️ cambia esto por tu dominio real cuando lo tengas
+  title: {
+    default: "UnderChile | Escenas Musicales Locales",
+    template: "%s | UnderChile",
+  },
+  description:
+    "La plataforma de la música independiente chilena. Descubre bandas, bares y eventos locales en tu comuna.",
+  openGraph: {
+    siteName: "UnderChile",
+    type: "website",
+    locale: "es_CL",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 const theme = createTheme({
-  primaryColor: "grape", // Nuestro color violeta nocturno
+  primaryColor: "grape",
   fontFamily: "sans-serif",
 });
 
@@ -19,10 +34,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // 🔥 Agregamos suppressHydrationWarning aquí para que Next.js no reclame por el script de Mantine
     <html lang="es" suppressHydrationWarning>
       <head>
-        {/* Dejamos el script obligatorio bien configurado */}
         <ColorSchemeScript defaultColorScheme="dark" />
       </head>
       <body>

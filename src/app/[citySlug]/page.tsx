@@ -1,28 +1,61 @@
 import { Title, Text, Button, SimpleGrid, Card, Badge, Group, Stack } from "@mantine/core";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
-import Link from "next/link"; // Mantenemos nuestra importación nativa
+import Link from "next/link";
+import type { Metadata } from "next";
+import BandFilterSection from "./BandFilterSection";
 import classes from "./page.module.css";
 
 interface CityPageProps {
   params: Promise<{ citySlug: string }>;
 }
 
+export async function generateMetadata({ params }: CityPageProps): Promise<Metadata> {
+  const { citySlug } = await params;
+
+  const city = await db.city.findUnique({
+    where: { slug: citySlug.toLowerCase() },
+    select: {
+      name: true,
+      bands: { where: { status: "APPROVED" }, select: { id: true } },
+      venues: { select: { id: true } },
+    },
+  });
+
+  if (!city) {
+    return { title: "Comuna no encontrada" };
+  }
+
+  const description = `Descubre la escena musical independiente de ${city.name}: ${city.bands.length} bandas locales, ${city.venues.length} bares y espacios, y la cartelera de próximos eventos.`;
+
+  return {
+    title: `Under ${city.name}`,
+    description,
+    openGraph: {
+      title: `Under ${city.name} 🎸`,
+      description,
+      url: `/${citySlug}`,
+    },
+  };
+}
+
 export default async function CityPage({ params }: CityPageProps) {
   const { citySlug } = await params;
 
-  // 🔍 Traemos la comuna con TODO: bandas, bares y sus respectivos eventos
   const cityData = await db.city.findUnique({
     where: { slug: citySlug.toLowerCase() },
     include: {
-      bands: true,
+      bands: {
+        where: { status: "APPROVED" },
+        orderBy: [{ isFeatured: "desc" }, { name: "asc" }],
+      },
       venues: true,
       events: {
         include: {
-          venue: true, // Incluimos el bar para saber dónde es el evento
+          venue: true,
         },
         orderBy: {
-          date: "asc", // Los eventos más cercanos primero
+          date: "asc",
         },
       },
     },
@@ -34,7 +67,6 @@ export default async function CityPage({ params }: CityPageProps) {
 
   return (
     <main className={classes.container}>
-      {/* Encabezado */}
       <header className={classes.header}>
         <Title order={1} className={classes.title}>
           Under {cityData.name} 🎸
@@ -44,7 +76,6 @@ export default async function CityPage({ params }: CityPageProps) {
         </Text>
       </header>
 
-      {/* SECCIÓN: PRÓXIMOS EVENTOS (CARTELERA) */}
       <section style={{ marginBottom: "4rem" }}>
         <Title order={2} size="h2" mb="xl" c="grape">
           Próximas Fechas / Cartelera 📅
@@ -80,7 +111,13 @@ export default async function CityPage({ params }: CityPageProps) {
 
                   <Stack gap={4} mb="md">
                     <Text size="sm" c="dimmed">
-                      📍 Lugar: <strong style={{ color: "#fff" }}>{event.venue.name}</strong>
+                      📍 Lugar:{" "}
+                      <Link
+                        href={`/${citySlug}/venues/${event.venue.slug}`}
+                        style={{ color: "#fff", fontWeight: 700, textDecoration: "underline" }}
+                      >
+                        {event.venue.name}
+                      </Link>
                     </Text>
                     <Text size="xs" c="dimmed">
                       {event.venue.address}
@@ -101,53 +138,8 @@ export default async function CityPage({ params }: CityPageProps) {
         )}
       </section>
 
-      {/* SECCIÓN DE BANDAS LOCALES */}
-      <section style={{ marginBottom: "4rem" }}>
-        <Title order={2} size="h2" mb="xl" c="white">
-          Bandas de la Comuna ({cityData.bands.length})
-        </Title>
-        
-        {cityData.bands.length === 0 ? (
-          <Text c="dimmed">No hay bandas registradas en esta ciudad todavía.</Text>
-        ) : (
-          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
-            {cityData.bands.map((band) => (
-              <Card key={band.id} shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: "#1a1b1e" }}>
-                <Group justify="space-between" mb="xs">
-                  <Text fw={700} size="lg" c="white">{band.name}</Text>
-                  {band.isFeatured && (
-                    <Badge color="yellow" variant="light">Destacada</Badge>
-                  )}
-                </Group>
+      <BandFilterSection bands={cityData.bands} citySlug={citySlug} />
 
-                <Group gap={5} mb="md">
-                  {band.genre.map((g) => (
-                    <Badge key={g} color="grape" variant="outline" size="sm">{g}</Badge>
-                  ))}
-                </Group>
-
-                <Text size="sm" c="dimmed" lineClamp={3} mb="md">
-                  {band.bio || "Esta banda aún no ha agregado su biografía."}
-                </Text>
-
-                {/* 🔥 SOLUCIÓN AQUÍ: Envolvemos el botón con Link de forma nativa e independiente */}
-                <Link href={`/${citySlug}/${band.slug}`} style={{ textDecoration: 'none', display: 'block', width: '100%' }}>
-                  <Button 
-                    variant="light" 
-                    color="grape" 
-                    fullWidth 
-                    radius="md"
-                  >
-                    Ver Perfil Banda
-                  </Button>
-                </Link>
-              </Card>
-            ))}
-          </SimpleGrid>
-        )}
-      </section>
-
-      {/* SECCIÓN DE LOCALES / VENUES */}
       <section style={{ marginBottom: "2rem" }}>
         <Title order={2} size="h2" mb="xl" c="white">
           Espacios & Bares ({cityData.venues.length})
@@ -161,10 +153,12 @@ export default async function CityPage({ params }: CityPageProps) {
               <Card key={venue.id} shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: "#1a1b1e" }}>
                 <Text fw={700} size="lg" c="white" mb="xs">{venue.name}</Text>
                 <Text size="sm" c="dimmed" mb="md">📍 {venue.address}</Text>
-                
-                <Button variant="outline" color="gray" fullWidth mt="auto" radius="md">
-                  Ver Detalles Espacio
-                </Button>
+
+                <Link href={`/${citySlug}/venues/${venue.slug}`} style={{ textDecoration: "none", display: "block", width: "100%" }}>
+                  <Button variant="outline" color="gray" fullWidth radius="md">
+                    Ver Detalles Espacio
+                  </Button>
+                </Link>
               </Card>
             ))}
           </SimpleGrid>

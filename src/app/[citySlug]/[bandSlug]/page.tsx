@@ -1,37 +1,73 @@
-import { Title, Text, Button, Container, Badge, Group, Card, Stack } from "@mantine/core";
+import { Title, Text, Button, Container, Badge, Group, Card, Stack, SimpleGrid } from "@mantine/core";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import classes from "./page.module.css";
 
 interface BandPageProps {
   params: Promise<{ citySlug: string; bandSlug: string }>;
 }
 
-export default async function BandPage({ params }: BandPageProps) {
-  const { citySlug, bandSlug } = await params;
+export async function generateMetadata({ params }: BandPageProps): Promise<Metadata> {
+  const { bandSlug } = await params;
 
-  // 🔍 Vamos a Neon a buscar la banda por su slug único
-  const bandData = await db.band.findUnique({
+  const band = await db.band.findUnique({
     where: { slug: bandSlug.toLowerCase() },
-    include: {
-      city: true, // Para saber a qué ciudad pertenece de forma relacional
+    select: {
+      name: true,
+      bio: true,
+      genre: true,
+      logoUrl: true,
+      city: { select: { name: true } },
+      status: true,
     },
   });
 
-  // Si la banda no existe, o si se intenta meter en una ciudad que no le corresponde
-  if (!bandData || bandData.city.slug !== citySlug.toLowerCase()) {
+  if (!band || band.status !== "APPROVED") {
+    return { title: "Banda no encontrada" };
+  }
+
+  const description =
+    band.bio?.slice(0, 160) ||
+    `${band.name} es una banda de ${band.genre.join(", ")} de ${band.city.name}. Descúbrela en UnderChile.`;
+
+  return {
+    title: band.name,
+    description,
+    openGraph: {
+      title: `${band.name} | Under ${band.city.name}`,
+      description,
+      images: band.logoUrl ? [band.logoUrl] : undefined,
+    },
+  };
+}
+
+export default async function BandPage({ params }: BandPageProps) {
+  const { citySlug, bandSlug } = await params;
+
+  const bandData = await db.band.findUnique({
+    where: { slug: bandSlug.toLowerCase() },
+    include: {
+      city: true,
+    },
+  });
+
+  if (
+    !bandData ||
+    bandData.city.slug !== citySlug.toLowerCase() ||
+    bandData.status !== "APPROVED"
+  ) {
     return notFound();
   }
 
   return (
     <Container size="sm" className={classes.container}>
-      {/* Botón flotante para volver a la comuna */}
-      <Button 
-        component={Link} 
-        href={`/${citySlug}`} 
-        variant="subtle" 
-        color="gray" 
+      <Button
+        component={Link}
+        href={`/${citySlug}`}
+        variant="subtle"
+        color="gray"
         mb="xl"
       >
         ← Volver a Under {bandData.city.name}
@@ -53,7 +89,6 @@ export default async function BandPage({ params }: BandPageProps) {
             )}
           </Group>
 
-          {/* Etiquetas de Género */}
           <Group gap="xs" mt="xs">
             {bandData.genre.map((g) => (
               <Badge key={g} color="grape" variant="light" size="md">
@@ -64,7 +99,6 @@ export default async function BandPage({ params }: BandPageProps) {
 
           <hr style={{ borderColor: "#2c2e33", margin: "1rem 0" }} />
 
-          {/* Biografía de la Banda */}
           <Title order={2} size="h4" c="white">Biografía</Title>
           <Text className={classes.bio}>
             {bandData.bio || "Esta banda aún no ha redactado su biografía oficial."}
@@ -72,26 +106,25 @@ export default async function BandPage({ params }: BandPageProps) {
 
           <hr style={{ borderColor: "#2c2e33", margin: "1rem 0" }} />
 
-          {/* Enlaces de Streaming y Redes */}
           <Title order={2} size="h4" c="white" mb="xs">Escuchar & Seguir</Title>
           <SimpleGrid cols={2} spacing="md">
-            <Button 
-              component="a" 
-              href={bandData.spotifyUrl || "#"} 
-              target="_blank" 
+            <Button
+              component="a"
+              href={bandData.spotifyUrl || "#"}
+              target="_blank"
               disabled={!bandData.spotifyUrl}
-              color="green" 
+              color="green"
               variant="light"
               radius="md"
             >
               🎵 Spotify
             </Button>
-            <Button 
-              component="a" 
-              href={bandData.instagramUrl || "#"} 
-              target="_blank" 
+            <Button
+              component="a"
+              href={bandData.instagramUrl || "#"}
+              target="_blank"
               disabled={!bandData.instagramUrl}
-              color="pink" 
+              color="pink"
               variant="light"
               radius="md"
             >
