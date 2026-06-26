@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { isAdminAuthenticated } from "@/lib/adminAuth";
 import { logoutAdmin } from "./login/actions";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import BandModerationCard from "./BandModerationCard";
 import ApprovedBandCard from "./ApprovedBandCard";
 
@@ -35,11 +36,20 @@ export default async function AdminPage() {
     <Container size="md" style={{ paddingTop: "3rem", paddingBottom: "4rem" }}>
       <Group justify="space-between" align="center" mb="xl">
         <Title order={1} c="white">Panel de Moderación 🛡️</Title>
-        <form action={logoutAdmin}>
-          <Button type="submit" variant="subtle" color="gray" radius="md">
-            Cerrar sesión
-          </Button>
-        </form>
+        <Group gap="sm">
+          {/* 🔥 Corregido: Envoltura limpia sin el prop component={Link} */}
+          <Link href="/admin/auditoria" passHref style={{ textDecoration: 'none' }}>
+            <Button variant="outline" color="gray" radius="md">
+              📋 Ver Auditoría
+            </Button>
+          </Link>
+          
+          <form action={logoutAdmin}>
+            <Button type="submit" variant="subtle" color="gray" radius="md">
+              Cerrar sesión
+            </Button>
+          </form>
+        </Group>
       </Group>
 
       <Title order={2} size="h3" c="yellow" mb="md">

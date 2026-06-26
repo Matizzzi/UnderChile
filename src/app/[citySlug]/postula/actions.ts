@@ -4,13 +4,14 @@ import { db } from "@/lib/db";
 import { generateUniqueSlug } from "@/lib/slugify";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/getClientIp";
+import { isValidInstagramUrl, isValidSpotifyUrl } from "@/lib/urlValidation";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export type PostulaFormState = {
   error?: string;
   success?: boolean;
 };
 
-// 🔒 Rate limit: máximo 3 postulaciones cada 10 minutos por IP
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 
@@ -20,6 +21,16 @@ export async function postularBanda(
   formData: FormData
 ): Promise<PostulaFormState> {
   const ip = await getClientIp();
+
+  // 🛡️ Validación de Cloudflare Turnstile
+  const turnstileToken = formData.get("cf-turnstile-response") as string;
+  const isHuman = await verifyTurnstileToken(turnstileToken, ip);
+
+  if (!isHuman) {
+    return { error: "No pudimos verificar que eres una persona real. Intenta de nuevo." };
+  }
+
+  // 🔒 Control de Rate Limiting
   const rateLimitResult = checkRateLimit(
     `postula-banda:${ip}`,
     RATE_LIMIT_MAX,
@@ -56,12 +67,12 @@ export async function postularBanda(
     return { error: "Selecciona al menos un género musical." };
   }
 
-  if (instagramUrl && !instagramUrl.includes("instagram.com")) {
-    return { error: "El link de Instagram no parece válido." };
+  if (instagramUrl && !isValidInstagramUrl(instagramUrl)) {
+    return { error: "El link de Instagram no es válido. Debe ser una URL de instagram.com." };
   }
 
-  if (spotifyUrl && !spotifyUrl.includes("spotify.com")) {
-    return { error: "El link de Spotify no parece válido." };
+  if (spotifyUrl && !isValidSpotifyUrl(spotifyUrl)) {
+    return { error: "El link de Spotify no es válido. Debe ser una URL de Spotify válida." };
   }
 
   // Verificamos que la comuna exista

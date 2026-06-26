@@ -40,7 +40,7 @@ model Band {
   spotifyUrl   String?
   instagramUrl String?
   isFeatured   Boolean    @default(false)
-  status       BandStatus @default(APPROVED) // 🔥 Nuevo: control de postulaciones
+  status       BandStatus @default(APPROVED)
   cityId       String
   createdAt    DateTime   @default(now())
   city         City       @relation(fields: [cityId], references: [id])
@@ -69,4 +69,19 @@ model Event {
   createdAt   DateTime @default(now())
   city        City     @relation(fields: [cityId], references: [id])
   venue       Venue    @relation(fields: [venueId], references: [id])
+}
+
+// 🔥 NUEVO: registro de auditoría de acciones de moderación
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String   // ej: "APPROVE_BAND", "REJECT_BAND", "REVERT_TO_PENDING", "TOGGLE_FEATURED"
+  targetType String   // ej: "Band" (deja la puerta abierta a Venue/Event en el futuro)
+  targetId   String   // id de la entidad afectada
+  targetName String   // nombre legible al momento de la acción (por si la banda se borra después)
+  actor      String   @default("admin") // hoy es siempre "admin" (un solo usuario); listo para multi-admin a futuro
+  details    String?  // info adicional opcional, ej: "isFeatured: true"
+  createdAt  DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([createdAt])
 }

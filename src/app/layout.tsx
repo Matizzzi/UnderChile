@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { ColorSchemeScript, MantineProvider, createTheme } from "@mantine/core";
+import { MantineProvider, createTheme } from "@mantine/core";
 import "@mantine/core/styles.css";
 import "./globals.css";
 
-// 🔥 Metadata base del sitio. Cada página puede sobreescribir esto
-// con su propio generateMetadata() para tener título/descripción únicos.
 export const metadata: Metadata = {
-  metadataBase: new URL("https://underchile.cl"), // ⚠️ cambia esto por tu dominio real cuando lo tengas
+  metadataBase: new URL("https://underchile.cl"),
   title: {
     default: "UnderChile | Escenas Musicales Locales",
     template: "%s | UnderChile",
@@ -36,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
-        <ColorSchemeScript defaultColorScheme="dark" />
+        {/* Dejamos esto limpio. Recuerda que el script reside de forma segura en head.tsx */}
       </head>
       <body>
         <MantineProvider theme={theme} defaultColorScheme="dark">
